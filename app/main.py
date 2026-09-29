@@ -18,28 +18,69 @@ def get_db():
     finally:
         db.close()
 
+
+@app.post("/products")
+def create_product(
+    pName: str,
+    pDescription: str,
+    pPrice: float,
+    pQuantity: int,
+    db: Session = Depends(get_db)
+):
+    product = Product(
+        name=pName,
+        description=pDescription,
+        price=pPrice,
+        quantity=pQuantity
+    )
+
+    db.add(product)
+    db.commit()
+    db.refresh(product)
+
+    return product
+
 @app.get("/products")
 def get_products(db: Session = Depends(get_db)):
     products = db.query(Product).all()
 
     return products
 
-@app.post("/products")
-def create_product(
-    name: str,
-    description: str,
-    price: float,
-    quantity: int,
+@app.get("/products/{product_id}")
+def get_product(
+    product_id: int,
     db: Session = Depends(get_db)
 ):
-    product = Product(
-        name=name,
-        description=description,
-        price=price,
-        quantity=quantity
-    )
+    product = db.query(Product).filter(
+        Product.id == product_id
+    ).first()
 
-    db.add(product)
+    if product is None:
+        return {"message": "Product not found"}
+
+    return product
+
+@app.put("/products/{product_id}")
+def update_product(
+    product_id: int,
+    pName: str,
+    pDescription: str,
+    pPrice: float,
+    pQuantity: int,
+    db: Session = Depends(get_db)
+):
+    product = db.query(Product).filter(
+        Product.id == product_id
+    ).first()
+
+    if product is None:
+        return {"message": "Product not found"}
+
+    product.name = pName
+    product.description = pDescription
+    product.price = pPrice
+    product.quantity = pQuantity
+
     db.commit()
     db.refresh(product)
 
