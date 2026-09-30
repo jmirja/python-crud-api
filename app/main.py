@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.database import SessionLocal, engine
 from app.models import Base, Product
+from app.schemas.product import ProductCreate, ProductResponse
 
 app = FastAPI()
 
@@ -19,19 +20,16 @@ def get_db():
         db.close()
 
 
-@app.post("/products")
+@app.post("/products", response_model=ProductResponse)
 def create_product(
-    pName: str,
-    pDescription: str,
-    pPrice: float,
-    pQuantity: int,
+    product_data: ProductCreate,
     db: Session = Depends(get_db)
 ):
     product = Product(
-        name=pName,
-        description=pDescription,
-        price=pPrice,
-        quantity=pQuantity
+        name=product_data.name,
+        description=product_data.description,
+        price=product_data.price,
+        quantity=product_data.quantity  
     )
 
     db.add(product)
