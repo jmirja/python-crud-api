@@ -1,10 +1,10 @@
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, HTTPException
 from sqlalchemy.orm import Session
 
 
 from app.database import SessionLocal, engine
 from app.models import Base, Product
-from app.schemas.product import ProductCreate, ProductResponse
+from app.schemas.product import ProductCreate, ProductResponse, ProductUpdate
 
 app = FastAPI()
 
@@ -38,13 +38,13 @@ def create_product(
 
     return product
 
-@app.get("/products")
+@app.get("/products", response_model=list[ProductResponse])
 def get_products(db: Session = Depends(get_db)):
     products = db.query(Product).all()
 
     return products
 
-@app.get("/products/{product_id}")
+@app.get("/products/{product_id}", response_model=ProductResponse)
 def get_product(
     product_id: int,
     db: Session = Depends(get_db)
@@ -54,17 +54,17 @@ def get_product(
     ).first()
 
     if product is None:
-        return {"message": "Product not found"}
+            raise HTTPException(
+            status_code=404,
+            detail="Product not found"
+        )
 
     return product
 
-@app.put("/products/{product_id}")
+@app.put("/products/{product_id}", response_model=ProductResponse)
 def update_product(
     product_id: int,
-    pName: str,
-    pDescription: str,
-    pPrice: float,
-    pQuantity: int,
+    product_data: ProductUpdate,
     db: Session = Depends(get_db)
 ):
     product = db.query(Product).filter(
@@ -72,12 +72,15 @@ def update_product(
     ).first()
 
     if product is None:
-        return {"message": "Product not found"}
+        raise HTTPException(
+            status_code=404,
+            detail="Product not found"
+        )
 
-    product.name = pName
-    product.description = pDescription
-    product.price = pPrice
-    product.quantity = pQuantity
+    product.name = product_data.name
+    product.description = product_data.description  
+    product.price = product_data.price
+    product.quantity = product_data.quantity   
 
     db.commit()
     db.refresh(product)
@@ -94,7 +97,10 @@ def delete_product(
     ).first()
 
     if product is None:
-        return {"message": "Product not found"}
+        raise HTTPException(
+            status_code=404,
+            detail="Product not found"
+        )
 
     db.delete(product)
     db.commit()
